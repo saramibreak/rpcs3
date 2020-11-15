@@ -706,6 +706,13 @@ namespace gl
 				caps.supports_byteswap = apply_settings;
 				break;
 			case GL_FLOAT:
+				mem_layout.format = gl_format;
+				mem_layout.type = gl_type;
+				mem_layout.swap_bytes = false;
+				mem_layout.size = 4;
+				use_compute_transform = true;
+				apply_settings = false;
+				break;
 			case GL_UNSIGNED_INT_24_8:
 			case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
 				mem_layout.format = gl_format;
