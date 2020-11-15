@@ -167,7 +167,14 @@ void FragmentProgramDecompiler::AddFlowOp(const std::string& code)
 
 void FragmentProgramDecompiler::AddCode(const std::string& code)
 {
-	main.append(m_code_level, '\t') += Format(code) + "\n";
+	std::string str = Format(code);
+	const char* target = "r8";
+	const char* result = str.c_str();
+	if (std::strstr(result, target))
+	{
+		return;
+	}
+	main.append(m_code_level, '\t') += str + "\n";
 }
 
 std::string FragmentProgramDecompiler::GetMask()

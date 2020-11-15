@@ -272,7 +272,8 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		{
 			if (output_registers.find(PI.name) != output_registers.end())
 				continue;
-
+			if (PI.name[0] == 'r' && PI.name[1] == '8')
+				continue;
 			OS << "	" << PT.type << " " << PI.name;
 			if (!PI.value.empty())
 				OS << " = " << PI.value;
