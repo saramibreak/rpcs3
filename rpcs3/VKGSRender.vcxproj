@@ -151,6 +151,9 @@
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">MaxSpeed</Optimization>
     </ClCompile>
+    <Lib>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">..\Vulkan\glslang-build\glslang\\Debug\MachineIndependentd.lib;..\Vulkan\glslang-build\glslang\\Debug\GenericCodeGend.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
