@@ -14,7 +14,11 @@
 LOG_CHANNEL(gui_log, "GUI");
 
 constexpr auto qstr = QString::fromStdString;
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
 
 cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings): xgui_settings(xSettings)
 {

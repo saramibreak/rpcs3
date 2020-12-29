@@ -20,6 +20,12 @@ skylander_dialog* skylander_dialog::inst = nullptr;
 std::optional<std::tuple<u8, u16, u16>> skylander_dialog::sky_slots[UI_SKY_NUM];
 QString last_skylander_path;
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 const std::map<const std::pair<const u16, const u16>, const std::string> list_skylanders = {
     {{0, 0x0000}, "Whirlwind"},
     {{0, 0x1801}, "Series 2 Whirlwind"},
@@ -633,7 +639,7 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 			return;
 		}
 
-		fs::file sky_file(file_path.toStdString(), fs::read + fs::write + fs::create);
+		fs::file sky_file(sstr(file_path), fs::read + fs::write + fs::create);
 		if (!sky_file)
 		{
 			QMessageBox::warning(this, tr("Failed to create skylander file!"), tr("Failed to create skylander file:\n%1").arg(file_path), QMessageBox::Ok);
@@ -782,7 +788,7 @@ void skylander_dialog::load_skylander(u8 slot)
 
 void skylander_dialog::load_skylander_path(u8 slot, const QString& path)
 {
-	fs::file sky_file(path.toStdString(), fs::read + fs::write + fs::lock);
+	fs::file sky_file(sstr(path), fs::read + fs::write + fs::lock);
 	if (!sky_file)
 	{
 		QMessageBox::warning(this, tr("Failed to open the skylander file!"), tr("Failed to open the skylander file(%1)!\nFile may already be in use on the portal.").arg(path), QMessageBox::Ok);

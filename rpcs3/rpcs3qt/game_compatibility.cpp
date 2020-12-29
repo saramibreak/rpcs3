@@ -14,7 +14,11 @@
 LOG_CHANNEL(compat_log, "Compat");
 
 constexpr auto qstr = QString::fromStdString;
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
 
 game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings, QWidget* parent)
 	: QObject(parent)

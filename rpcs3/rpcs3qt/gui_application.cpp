@@ -70,7 +70,7 @@ bool gui_application::Init()
 	active_user = m_persistent_settings->GetCurrentUser(active_user.isEmpty() ? "00000001" : active_user);
 
 	// Force init the emulator
-	InitializeEmulator(active_user.toStdString(), true, m_show_gui);
+	InitializeEmulator(sstr(active_user), true, m_show_gui);
 
 	// Create the main window
 	if (m_show_gui)
@@ -131,7 +131,7 @@ void gui_application::SwitchTranslator(QTranslator& translator, const QString& f
 	else if (const QString default_code = QLocale(QLocale::English).bcp47Name(); language_code != default_code)
 	{
 		// show error, but ignore default case "en", since it is handled in source code
-		gui_log.error("No translation file found in: %s", file_path.toStdString());
+		gui_log.error("No translation file found in: %s", sstr(file_path));
 
 		// reset current language to default "en"
 		m_language_code = default_code;
@@ -173,7 +173,7 @@ void gui_application::LoadLanguage(const QString& language_code)
 
 	m_gui_settings->SetValue(gui::loc_language, m_language_code);
 
-	gui_log.notice("Current language changed to %s (%s)", locale_name.toStdString(), language_code.toStdString());
+	gui_log.notice("Current language changed to %s (%s)", sstr(locale_name), sstr(language_code));
 }
 
 QStringList gui_application::GetAvailableLanguageCodes()

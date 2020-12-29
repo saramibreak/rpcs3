@@ -58,7 +58,11 @@ LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
 
 main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
 	: QMainWindow(parent)

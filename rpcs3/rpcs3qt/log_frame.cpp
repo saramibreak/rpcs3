@@ -26,6 +26,12 @@ extern std::mutex g_tty_mutex;
 
 constexpr auto qstr = QString::fromStdString;
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 struct gui_listener : logs::listener
 {
 	atomic_t<logs::level> enabled{logs::level{UINT_MAX}};
@@ -341,7 +347,7 @@ void log_frame::CreateAndConnectActions()
 
 	connect(m_tty_input, &QLineEdit::returnPressed, [this]()
 	{
-		std::string text = m_tty_input->text().toStdString();
+		std::string text = sstr(m_tty_input->text());
 
 		{
 			std::lock_guard lock(g_tty_mutex);

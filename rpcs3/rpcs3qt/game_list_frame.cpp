@@ -44,7 +44,11 @@
 LOG_CHANNEL(game_list_log, "GameList");
 LOG_CHANNEL(sys_log, "SYS");
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: custom_dock_widget(tr("Game List"), parent)

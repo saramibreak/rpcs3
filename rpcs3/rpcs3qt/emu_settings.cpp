@@ -17,7 +17,12 @@ LOG_CHANNEL(cfg_log, "CFG");
 
 extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 // Emit sorted YAML
@@ -433,8 +438,8 @@ void emu_settings::EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settin
 		if (!val.isValid() || val < min || val > max)
 		{
 			cfg_log.error("EnhanceDateTimeEdit '%s' tried to set an invalid value: %s. Setting to default: %s Allowed range: [%s, %s]",
-				cfg_adapter::get_setting_name(type), val.toString(Qt::ISODate).toStdString(), def.toString(Qt::ISODate).toStdString(),
-				min.toString(Qt::ISODate).toStdString(), max.toString(Qt::ISODate).toStdString());
+				cfg_adapter::get_setting_name(type), sstr(val.toString(Qt::ISODate)), sstr(def.toString(Qt::ISODate)),
+				sstr(min.toString(Qt::ISODate)), sstr(max.toString(Qt::ISODate)));
 			val = def;
 			m_broken_types.insert(type);
 			SetSetting(type, sstr(def.toString(Qt::ISODate)));

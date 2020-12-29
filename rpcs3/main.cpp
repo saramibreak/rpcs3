@@ -53,7 +53,11 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 
 #include "util/sysinfo.hpp"
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
 
 static semaphore<> s_qt_init;
 
@@ -265,7 +269,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 		}
 
 		{
-			rounding_str = qEnvironmentVariable("QT_SCALE_FACTOR_ROUNDING_POLICY", rounding_str.c_str()).toStdString();
+			rounding_str = sstr(qEnvironmentVariable("QT_SCALE_FACTOR_ROUNDING_POLICY", rounding_str.c_str()));
 
 			s64 rounding_val_final = 0;
 
@@ -291,11 +295,11 @@ void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QStrin
 
 	switch (type)
 	{
-	case QtDebugMsg: q_debug.trace("%s", msg.toStdString()); break;
-	case QtInfoMsg: q_debug.notice("%s", msg.toStdString()); break;
-	case QtWarningMsg: q_debug.warning("%s", msg.toStdString()); break;
-	case QtCriticalMsg: q_debug.error("%s", msg.toStdString()); break;
-	case QtFatalMsg: q_debug.fatal("%s", msg.toStdString()); break;
+	case QtDebugMsg: q_debug.trace("%s", sstr(msg)); break;
+	case QtInfoMsg: q_debug.notice("%s", sstr(msg)); break;
+	case QtWarningMsg: q_debug.warning("%s", sstr(msg)); break;
+	case QtCriticalMsg: q_debug.error("%s", sstr(msg)); break;
+	case QtFatalMsg: q_debug.fatal("%s", sstr(msg)); break;
 	}
 }
 
@@ -671,7 +675,7 @@ int main(int argc, char** argv)
 			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
 #endif
 		for (const auto& style : QStyleFactory::keys())
-			std::cout << "\n" << style.toStdString();
+			std::cout << "\n" << sstr(style);
 
 		return 0;
 	}
@@ -725,7 +729,7 @@ int main(int argc, char** argv)
 
 	if (parser.isSet(arg_config))
 	{
-		config_override_path = parser.value(config_option).toStdString();
+		config_override_path = sstr(parser.value(config_option));
 
 		if (!fs::is_file(config_override_path))
 		{
@@ -738,12 +742,12 @@ int main(int argc, char** argv)
 
 	for (const auto& opt : parser.optionNames())
 	{
-		sys_log.notice("Option passed via command line: %s = %s", opt.toStdString(), parser.value(opt).toStdString());
+		sys_log.notice("Option passed via command line: %s = %s", sstr(opt), parser.value(opt).toStdString());
 	}
 
 	if (const QStringList args = parser.positionalArguments(); !args.isEmpty())
 	{
-		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
+		sys_log.notice("Booting application from command line: %s", sstr(args.at(0)));
 
 		// Propagate command line arguments
 		std::vector<std::string> argv;
@@ -754,7 +758,7 @@ int main(int argc, char** argv)
 
 			for (int i = 1; i < args.length(); i++)
 			{
-				const std::string arg = args[i].toStdString();
+				const std::string arg = sstr(args[i]);
 				argv.emplace_back(arg);
 				sys_log.notice("Optional command line argument %d: %s", i, arg);
 			}

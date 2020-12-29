@@ -26,6 +26,12 @@
 
 constexpr auto qstr = QString::fromStdString;
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 LOG_CHANNEL(gui_log, "GUI");
 
 namespace
@@ -125,12 +131,12 @@ void user_manager_dialog::Init()
 	vbox_main->addLayout(hbox_buttons);
 	setLayout(vbox_main);
 
-	m_active_user = m_persistent_settings->GetValue(gui::persistent::active_user).toString().toStdString();
+	m_active_user = sstr(m_persistent_settings->GetValue(gui::persistent::active_user).toString());
 
 	// Handle deprecated value (before August 2nd 2020)
 	if (m_active_user.empty())
 	{
-		m_active_user = m_gui_settings->GetValue(gui::um_active_user).toString().toStdString();
+		m_active_user = sstr(m_gui_settings->GetValue(gui::um_active_user).toString());
 
 		if (!m_active_user.empty())
 		{
@@ -325,7 +331,7 @@ void user_manager_dialog::OnUserRename()
 		}
 
 		const std::string username_file = Emulator::GetHddDir() + "home/" + user_id + "/localusername";
-		const std::string new_username = text_to_validate.toStdString();
+		const std::string new_username = sstr(text_to_validate);
 
 		if (fs::write_file(username_file, fs::rewrite, new_username))
 		{
@@ -376,7 +382,7 @@ void user_manager_dialog::OnUserCreate()
 			continue;
 		}
 
-		GenerateUser(next_user_id, text_to_validate.toStdString());
+		GenerateUser(next_user_id, sstr(text_to_validate));
 		UpdateTable();
 		break;
 	}

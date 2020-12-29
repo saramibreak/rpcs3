@@ -6,7 +6,11 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
 
 vfs_dialog_tab::vfs_dialog_tab(vfs_settings_info settingsInfo, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
 	: QWidget(parent), m_info(std::move(settingsInfo)), m_gui_settings(std::move(guiSettings)), m_emu_settings(std::move(emuSettings))

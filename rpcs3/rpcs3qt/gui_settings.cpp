@@ -11,7 +11,11 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
 
 gui_settings::gui_settings(QObject* parent) : settings(parent)
 {

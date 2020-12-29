@@ -37,6 +37,12 @@
 
 LOG_CHANNEL(update_log, "UPDATER");
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 update_manager::update_manager()
 {
 }
@@ -172,7 +178,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 
 	const qint64 diff_msec = cur_date.msecsTo(lts_date);
 
-	update_log.notice("Current: %s, latest: %s, difference: %lld ms", cur_str.toStdString(), lts_str.toStdString(), diff_msec);
+	update_log.notice("Current: %s, latest: %s, difference: %lld ms", sstr(cur_str), sstr(lts_str), diff_msec);
 
 	Localized localized;
 
@@ -205,8 +211,8 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true));
 	}
 
-	m_request_url   = latest[os]["download"].toString().toStdString();
-	m_expected_hash = latest[os]["checksum"].toString().toStdString();
+	m_request_url   = sstr(latest[os]["download"].toString());
+	m_expected_hash = sstr(latest[os]["checksum"].toString());
 	m_expected_size = latest[os]["size"].toInt();
 
 	if (!m_request_url.starts_with("https://github.com/RPCS3/rpcs3"))

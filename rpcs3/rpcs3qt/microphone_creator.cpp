@@ -7,6 +7,12 @@
 
 constexpr auto qstr = QString::fromStdString;
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 microphone_creator::microphone_creator()
 {
 	setObjectName("microphone_creator");
@@ -60,7 +66,7 @@ std::string microphone_creator::set_device(u32 num, const QString& text)
 	if (text == get_none())
 		m_sel_list[num - 1] = "";
 	else
-		m_sel_list[num - 1] = text.toStdString();
+		m_sel_list[num - 1] = sstr(text);
 
 	const std::string final_list = m_sel_list[0] + "@@@" + m_sel_list[1] + "@@@" + m_sel_list[2] + "@@@" + m_sel_list[3] + "@@@";
 	return final_list;

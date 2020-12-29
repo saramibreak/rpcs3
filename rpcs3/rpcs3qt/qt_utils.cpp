@@ -11,7 +11,12 @@
 #include "Emu/System.h"
 #include "Utilities/File.h"
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 constexpr auto qstr = QString::fromStdString;
 
 namespace gui

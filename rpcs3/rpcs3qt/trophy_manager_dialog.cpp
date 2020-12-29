@@ -36,7 +36,11 @@ LOG_CHANNEL(gui_log, "GUI");
 namespace
 {
 	constexpr auto qstr = QString::fromStdString;
-	inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
+	inline std::string sstr(const QString& _in)
+	{
+		std::string tmp(_in.toUtf8());
+		return tmp;
+	}
 }
 
 trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings)

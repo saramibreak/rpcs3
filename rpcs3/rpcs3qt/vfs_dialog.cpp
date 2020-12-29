@@ -12,7 +12,11 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
 
 vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
 	: QDialog(parent), m_gui_settings(std::move(guiSettings)), m_emu_settings(std::move(emuSettings))

@@ -40,7 +40,12 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 inline QString qsv(std::string_view sv) { return QString(sv.data()); }
 

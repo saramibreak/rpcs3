@@ -5,6 +5,12 @@
 
 #include "Emu/localized_string_id.h"
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 /**
  * Localized emucore string collection class
  * Due to special characters this file should stay in UTF-8 format
@@ -19,7 +25,7 @@ public:
 	template <typename... Args>
 	static std::string get_string(localized_string_id id, Args&&... args)
 	{
-		return translated(id, std::forward<Args>(args)...).toStdString();
+		return sstr(translated(id, std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>

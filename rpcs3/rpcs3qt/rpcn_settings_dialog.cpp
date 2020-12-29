@@ -14,6 +14,12 @@
 #include <wolfssl/ssl.h>
 #include <wolfssl/openssl/evp.h>
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
     : QDialog(parent)
 {
@@ -85,7 +91,7 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 			}
 		}
 
-		std::string pass_str = password.toStdString();
+		std::string pass_str = sstr(password);
 		std::string salt_str = "No matter where you go, everybody's connected.";
 
 		u8 salted_pass[SHA_DIGEST_SIZE];
@@ -120,9 +126,9 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 
 bool rpcn_settings_dialog::save_config()
 {
-	const auto host  = m_edit_host->text().toStdString();
-	const auto npid  = m_edit_npid->text().toStdString();
-	const auto token = m_edit_token->text().toStdString();
+	const auto host  = sstr(m_edit_host->text());
+	const auto npid  = sstr(m_edit_npid->text());
+	const auto token = sstr(m_edit_token->text());
 
 	auto validate = [](const std::string& input) -> bool
 	{
@@ -223,7 +229,7 @@ bool rpcn_settings_dialog::create_account()
 		return false;
 	}
 
-	if (!rpcn->create_user(npid, password, online_name, avatar_url, email.toStdString()))
+	if (!rpcn->create_user(npid, password, online_name, avatar_url, sstr(email)))
 	{
 		QMessageBox::critical(this, tr("Error Creating Account"), tr("Failed to create the account"), QMessageBox::Ok);
 		rpcn->abort();

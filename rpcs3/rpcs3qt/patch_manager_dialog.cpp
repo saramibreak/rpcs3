@@ -22,6 +22,12 @@
 
 LOG_CHANNEL(patch_log, "PAT");
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 enum patch_column : int
 {
 	enabled,
@@ -170,7 +176,7 @@ void patch_manager_dialog::load_patches(bool show_error)
 
 	for (const auto& path : path_list)
 	{
-		if (!patch_engine::load(m_map, patches_path + path.toStdString()))
+		if (!patch_engine::load(m_map, patches_path + sstr(path)))
 		{
 			has_errors = true;
 		}
@@ -380,8 +386,8 @@ void patch_manager_dialog::filter_patches(const QString& term)
 		{
 			if (level == node_level::serial_level)
 			{
-				const std::string serial = item->data(0, serial_role).toString().toStdString();
-				const std::string app_version = item->data(0, app_version_role).toString().toStdString();
+				const std::string serial = sstr(item->data(0, serial_role).toString());
+				const std::string app_version = sstr(item->data(0, app_version_role).toString());
 
 				if (serial != patch_key::all &&
 					(m_owned_games.find(serial) == m_owned_games.end() || (app_version != patch_key::all && !m_owned_games.at(serial).contains(app_version))))
@@ -454,8 +460,8 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 	{
 		// Get patch identifiers stored in item data
 		info.hash = current->data(0, hash_role).toString();
-		const std::string hash = info.hash.toStdString();
-		const std::string description = current->data(0, description_role).toString().toStdString();
+		const std::string hash = sstr(info.hash);
+		const std::string description = sstr(current->data(0, description_role).toString());
 
 		// Find the patch for this item and get its metadata
 		if (m_map.find(hash) != m_map.end())
@@ -476,17 +482,17 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 	case node_level::serial_level:
 	{
 		const QString serial = current->data(0, serial_role).toString();
-		info.serial = serial.toStdString() == patch_key::all ? tr_all_serials : serial;
+		info.serial = sstr(serial) == patch_key::all ? tr_all_serials : serial;
 
 		const QString app_version = current->data(0, app_version_role).toString();
-		info.app_version = app_version.toStdString() == patch_key::all ? tr_all_versions : app_version;
+		info.app_version = sstr(app_version) == patch_key::all ? tr_all_versions : app_version;
 
 		[[fallthrough]];
 	}
 	case node_level::title_level:
 	{
 		const QString title = current->data(0, title_role).toString();
-		info.title = title.toStdString() == patch_key::all ? tr_all_titles : title;
+		info.title = sstr(title) == patch_key::all ? tr_all_titles : title;
 
 		[[fallthrough]];
 	}
@@ -511,12 +517,12 @@ void patch_manager_dialog::handle_item_changed(QTreeWidgetItem *item, int /*colu
 
 	// Get patch identifiers stored in item data
 	const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
-	const std::string hash = item->data(0, hash_role).toString().toStdString();
-	const std::string title = item->data(0, title_role).toString().toStdString();
-	const std::string serial = item->data(0, serial_role).toString().toStdString();
-	const std::string app_version = item->data(0, app_version_role).toString().toStdString();
-	const std::string description = item->data(0, description_role).toString().toStdString();
-	const std::string patch_group = item->data(0, patch_group_role).toString().toStdString();
+	const std::string hash = sstr(item->data(0, hash_role).toString());
+	const std::string title = sstr(item->data(0, title_role).toString());
+	const std::string serial = sstr(item->data(0, serial_role).toString());
+	const std::string app_version = sstr(item->data(0, app_version_role).toString());
+	const std::string description = sstr(item->data(0, description_role).toString());
+	const std::string patch_group = sstr(item->data(0, patch_group_role).toString());
 
 	// Uncheck other patches with the same patch_group if this patch was enabled
 	if (const auto node = item->parent(); node && enabled && !patch_group.empty() && level == node_level::patch_level)
@@ -525,7 +531,7 @@ void patch_manager_dialog::handle_item_changed(QTreeWidgetItem *item, int /*colu
 		{
 			if (const auto other = node->child(i); other && other != item)
 			{
-				const std::string other_patch_group = other->data(0, patch_group_role).toString().toStdString();
+				const std::string other_patch_group = sstr(other->data(0, patch_group_role).toString());
 
 				if (other_patch_group == patch_group)
 				{
@@ -565,8 +571,8 @@ void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &po
 	if (level == node_level::patch_level)
 	{
 		// Find the patch for this item and add menu items accordingly
-		const std::string hash = item->data(0, hash_role).toString().toStdString();
-		const std::string description = item->data(0, description_role).toString().toStdString();
+		const std::string hash = sstr(item->data(0, hash_role).toString());
+		const std::string description = sstr(item->data(0, description_role).toString());
 
 		if (m_map.find(hash) != m_map.end())
 		{
@@ -732,7 +738,7 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 
 	for (const QString& drop_path : drop_paths)
 	{
-		const auto path = drop_path.toStdString();
+		const auto path = sstr(drop_path);
 		patch_engine::patch_map patches;
 		std::stringstream log_message;
 
@@ -883,7 +889,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		return false;
 	}
 
-	if (const std::string version = version_obj.toString().toStdString();
+	if (const std::string version = sstr(version_obj.toString());
 		version != patch_engine_version)
 	{
 		patch_log.error("JSON contains wrong version: %s (needed: %s)", version, patch_engine_version);
@@ -909,9 +915,9 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 	patch_engine::patch_map patches;
 	std::stringstream log_message;
 
-	const std::string content = patch.toString().toStdString();
+	const std::string content = sstr(patch.toString());
 
-	if (hash_obj.toString().toStdString() != downloader::get_hash(content.c_str(), content.size(), true))
+	if (sstr(hash_obj.toString()) != downloader::get_hash(content.c_str(), content.size(), true))
 	{
 		patch_log.error("JSON content does not match the provided checksum");
 		return false;

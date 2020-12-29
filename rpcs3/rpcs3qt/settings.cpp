@@ -4,7 +4,11 @@
 
 #include "Utilities/File.h"
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
 
 settings::settings(QObject* parent) : QObject(parent),
 	m_settings_dir(ComputeSettingsDir())

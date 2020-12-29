@@ -9,6 +9,12 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 memory_string_searcher::memory_string_searcher(QWidget* parent)
 	: QDialog(parent)
 {
@@ -35,7 +41,7 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 
 void memory_string_searcher::OnSearch()
 {
-	const std::string wstr = m_addr_line->text().toStdString();
+	const std::string wstr = sstr(m_addr_line->text());
 	const char *str = wstr.c_str();
 	const u32 len = ::size32(wstr);
 

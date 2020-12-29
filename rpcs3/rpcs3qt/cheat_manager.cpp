@@ -26,6 +26,12 @@
 
 LOG_CHANNEL(log_cheat, "Cheat");
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 cheat_manager_dialog* cheat_manager_dialog::inst = nullptr;
 
 template <>
@@ -588,7 +594,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		if (row == -1)
 			return;
 
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+		std::string text  = sstr(tbl_cheats->item(row, cheat_table_columns::title)->text());
+		cheat_info* cheat = g_cheat.get(text, tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 		if (!cheat)
 		{
 			log_cheat.fatal("Failed to retrieve cheat selected from internal cheat_engine");
@@ -663,7 +670,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			return;
 		}
 
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+		std::string text  = sstr(tbl_cheats->item(row, cheat_table_columns::title)->text());
+		cheat_info* cheat = g_cheat.get(text, tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 		if (!cheat)
 		{
 			log_cheat.fatal("Failed to retrieve cheat edited from internal cheat_engine");
@@ -672,8 +680,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 		switch (column)
 		{
-		case cheat_table_columns::description: cheat->description = item->text().toStdString(); break;
-		case cheat_table_columns::script: cheat->red_script = item->text().toStdString(); break;
+		case cheat_table_columns::description: cheat->description = sstr(item->text()); break;
+		case cheat_table_columns::script: cheat->red_script = sstr(item->text()); break;
 		default: break;
 		}
 
@@ -702,7 +710,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 				if (rows.count(row))
 					continue;
 
-				g_cheat.erase(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+				std::string text = sstr(tbl_cheats->item(row, cheat_table_columns::title)->text());
+				g_cheat.erase(text, tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 				rows.insert(row);
 			}
 
@@ -712,7 +721,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		connect(import_cheats, &QAction::triggered, [this]()
 		{
 			QClipboard* clipboard = QGuiApplication::clipboard();
-			g_cheat.import_cheats_from_str(clipboard->text().toStdString());
+			g_cheat.import_cheats_from_str(sstr(clipboard->text()));
 			update_cheat_list();
 		});
 
@@ -730,7 +739,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 				if (rows.count(row))
 					continue;
 
-				cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+				std::string text  = sstr(tbl_cheats->item(row, cheat_table_columns::title)->text());
+				cheat_info* cheat = g_cheat.get(text, tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 				if (cheat)
 					export_string += cheat->to_str() + "^^^";
 
@@ -765,7 +775,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 	connect(btn_apply, &QPushButton::clicked, [this](bool /*checked*/)
 	{
 		const int row     = tbl_cheats->currentRow();
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+		std::string text  = sstr(tbl_cheats->item(row, cheat_table_columns::title)->text());
+		cheat_info* cheat = g_cheat.get(text, tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 
 		if (!cheat)
 		{

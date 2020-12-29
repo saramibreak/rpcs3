@@ -4,6 +4,12 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 persistent_settings::persistent_settings(QObject* parent) : settings(parent)
 {
 	// Don't use the .ini file ending for now, as it will be confused for a regular gui_settings file.
@@ -56,6 +62,6 @@ QString persistent_settings::GetCurrentUser(const QString& fallback) const
 		return user;
 	}
 
-	cfg_log.fatal("Could not parse user setting: '%s' = '%d'.", user.toStdString(), user_id);
+	cfg_log.fatal("Could not parse user setting: '%s' = '%d'.", sstr(user), user_id);
 	return QString();
 }

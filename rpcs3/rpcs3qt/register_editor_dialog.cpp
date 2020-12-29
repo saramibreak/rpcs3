@@ -18,7 +18,12 @@
 #include "util/asm.hpp"
 
 constexpr auto qstr = QString::fromStdString;
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+inline std::string sstr(const QString& _in)
+{
+	std::string tmp(_in.toUtf8());
+	return tmp;
+}
+
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 
 enum registers : int
