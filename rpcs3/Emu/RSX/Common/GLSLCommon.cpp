@@ -220,7 +220,18 @@ namespace glsl
 		"#define VTX_FMT_UNORM8  3\n"
 		"#define VTX_FMT_SINT16  4\n"
 		"#define VTX_FMT_COMP32  5\n"
-		"#define VTX_FMT_UINT8   6\n\n";
+		"#define VTX_FMT_UINT8   6\n\n"
+
+		"int preserve_sign_s16(const in uint bits)\n"
+		"{\n"
+		"	//convert raw 16 bit value into signed 32-bit integer counterpart\n"
+		"	if ((bits & 0x8000u) == 0)\n"
+		"		return int(bits);\n"
+		"	else\n"
+		"		return int(bits | 0xFFFF0000u);\n"
+		"}\n\n"
+
+		"#define get_s16(v, s) preserve_sign_s16(get_bits(v, s))\n\n";
 
 		// For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
 		// Note: Tested on Mesa iris with HD 530 and compilant path works fine, may be a bug on Windows proprietary drivers
@@ -283,26 +294,30 @@ namespace glsl
 
 		// NOTE: (int(n) or int(n)) is broken on some NVIDIA and INTEL hardware when the sign bit is involved.
 		// See https://github.com/RPCS3/rpcs3/issues/8990
-		"vec4 sext(const in ivec4 bits)\n"
-		"{\n"
-		"	// convert raw 16 bit values into signed 32-bit float4 counterpart\n"
-		"	bvec4 sign_check = lessThan(bits, ivec4(0x8000));\n"
-		"	return _select(bits - 65536, bits, sign_check);\n"
-		"}\n\n"
+//		"vec4 sext(const in ivec4 bits)\n"
+//		"{\n"
+//		"	// convert raw 16 bit values into signed 32-bit float4 counterpart\n"
+//		"	bvec4 sign_check = lessThan(bits, ivec4(0x8000));\n"
+//		"	return _select(bits - 65536, bits, sign_check);\n"
+//		"}\n\n"
 
-		"float sext(const in int bits)\n"
-		"{\n"
-		"	return (bits < 0x8000) ? float(bits) : float(bits - 65536); \n"
-		"}\n\n"
+//		"float sext(const in int bits)\n"
+//		"{\n"
+//		"	return (bits < 0x8000) ? float(bits) : float(bits - 65536); \n"
+//		"}\n\n"
 
 		"vec4 fetch_attribute(const in attribute_desc desc, const in int vertex_id, usamplerBuffer input_stream)\n"
 		"{\n"
+		"	vec4 result = vec4(0., 0., 0., 1.);\n"
+		"	vec4 scale = vec4(1.);\n"
+		"	bool reverse_order = false;\n"
+		"\n"
 		"	const int elem_size_table[] = { 2, 4, 2, 1, 2, 4, 1 };\n"
 		"	const float scaling_table[] = { 32768., 1., 1., 255., 1., 32767., 1. };\n"
 		"	const int elem_size = elem_size_table[desc.type];\n"
-		"	const vec4 scale = scaling_table[desc.type].xxxx;\n\n"
+//		"	const vec4 scale = scaling_table[desc.type].xxxx;\n\n"
 
-		"	uvec4 tmp, result = uvec4(0u);\n"
+		"	uvec4 tmp;\n"
 		"	vec4 ret;\n"
 		"	int n, i = int((vertex_id * desc.stride) + desc.starting_offset);\n\n"
 
@@ -321,7 +336,7 @@ namespace glsl
 		"			tmp.w = texelFetch(input_stream, i++).x;\n"
 		"			tmp.x = gen_bits(tmp.x, tmp.y, tmp.z, tmp.w, desc.swap_bytes);\n"
 		"		}\n\n"
-
+#if 0
 		"		mov(result, n, tmp.x);\n"
 		"	}\n\n"
 
@@ -360,6 +375,46 @@ namespace glsl
 		"	}\n\n"
 
 		"	return ret / scale; \n"
+#else
+		"		switch (desc.type)\n"
+		"		{\n"
+		"		case VTX_FMT_SNORM16:\n"
+		"			//signed normalized 16-bit\n"
+		"			mov(scale, n, 32767.);\n"
+		"		case VTX_FMT_SINT16:\n"
+		"			//signed word\n"
+		"			mov(result, n, preserve_sign_s16(tmp.x));\n"
+		"			break;\n"
+		"		case VTX_FMT_FLOAT32:\n"
+		"			//float\n"
+		"			mov(result, n, uintBitsToFloat(tmp.x));\n"
+		"			break;\n"
+		"		case VTX_FMT_FLOAT16:\n"
+		"			//half\n"
+		"			mov(result, n, unpackHalf2x16(tmp.x).x);\n"
+		"			break;\n"
+		"		case VTX_FMT_UNORM8:\n"
+		"			//unsigned byte\n"
+		"			mov(scale, n, 255.);\n"
+		"		case VTX_FMT_UINT8:\n"
+		"			//ub256\n"
+		"			mov(result, n, tmp.x);\n"
+		"			reverse_order = desc.swap_bytes;\n"
+		"			break;\n"
+		"		case VTX_FMT_COMP32:\n"
+		"			//cmp\n"
+		"			result.x = preserve_sign_s16((tmp.x & 0x7FFu) << 5);\n"
+		"			result.y = preserve_sign_s16(((tmp.x >> 11) & 0x7FFu) << 5);\n"
+		"			result.z = preserve_sign_s16(((tmp.x >> 22) & 0x3FFu) << 6);\n"
+		"			result.w = 1.;\n"
+		"			scale = vec4(32767., 32767., 32767., 1.);\n"
+		"			break;\n"
+		"		}\n"
+		"	}\n"
+		"\n"
+		"	result /= scale;\n"
+		"	return (reverse_order)? result.wzyx: result;\n"
+#endif
 		"}\n\n"
 
 		"attribute_desc fetch_desc(const in int location)\n"
@@ -735,10 +790,10 @@ namespace glsl
 			"	return _select(result, vec4(remap_select), choice);\n"
 			"}\n\n"
 
-			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, const in vec2 coord, const in uint remap, const in uint flags)\n"
+			"vec4 texture2DReconstruct(sampler2D tex, const in vec2 coord, const in uint remap, const in uint flags)\n"
 			"{\n"
 			"	vec4 result = decode_depth24(texture(tex, coord.xy).r, _test_bit(flags, DEPTH_FLOAT));\n"
-			"	result.z = float(texture(stencil_tex, coord.xy).x) / 255.f;\n\n"
+//			"	result.z = float(texture(stencil_tex, coord.xy).x) / 255.f;\n\n"
 
 			"	if (remap == 0xAAE4)\n"
 			" 		return result;\n\n"
@@ -841,19 +896,19 @@ namespace glsl
 			"#define TEX_NAME(index) tex##index\n"
 			"#define TEX_NAME_STENCIL(index) tex##index##_stencil\n\n"
 
-			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x), TEX_FLAGS(index))\n"
-			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, bias), TEX_FLAGS(index))\n"
-			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, lod), TEX_FLAGS(index))\n"
-			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), coord2 * vec2(texture_parameters[index].scale.x, 1.)), TEX_FLAGS(index))\n"
+			"#define TEX1D(index, tex, coord1) process_texel(texture(tex, coord1 * texture_parameters[index].scale.x), TEX_FLAGS(index))\n"
+			"#define TEX1D_BIAS(index, tex, coord1, bias) process_texel(texture(tex, coord1 * texture_parameters[index].scale.x, bias), TEX_FLAGS(index))\n"
+			"#define TEX1D_LOD(index, tex, coord1, lod) process_texel(textureLod(tex, coord1 * texture_parameters[index].scale.x, lod), TEX_FLAGS(index))\n"
+			"#define TEX1D_GRAD(index, tex, coord1, dpdx, dpdy) process_texel(textureGrad(tex, coord1 * texture_parameters[index].scale.x, dpdx, dpdy), TEX_FLAGS(index))\n"
+			"#define TEX1D_PROJ(index, tex, coord2) process_texel(textureProj(tex, coord2 * vec2(texture_parameters[index].scale.x, 1.)), TEX_FLAGS(index))\n"
 
-			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale), TEX_FLAGS(index))\n"
-			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale, bias), TEX_FLAGS(index))\n"
-			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), coord2 * texture_parameters[index].scale, lod), TEX_FLAGS(index))\n"
-			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].scale, dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.)), TEX_FLAGS(index))\n"
+			"#define TEX2D(index, tex, coord2) process_texel(texture(tex, coord2 * texture_parameters[index].scale), TEX_FLAGS(index))\n"
+			"#define TEX2D_BIAS(index, tex, coord2, bias) process_texel(texture(tex, coord2 * texture_parameters[index].scale, bias), TEX_FLAGS(index))\n"
+			"#define TEX2D_LOD(index, tex, coord2, lod) process_texel(textureLod(tex, coord2 * texture_parameters[index].scale, lod), TEX_FLAGS(index))\n"
+			"#define TEX2D_GRAD(index, tex, coord2, dpdx, dpdy) process_texel(textureGrad(tex, coord2 * texture_parameters[index].scale, dpdx, dpdy), TEX_FLAGS(index))\n"
+			"#define TEX2D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4 * vec4(texture_parameters[index].scale, 1., 1.)), TEX_FLAGS(index))\n"
 
-			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].scale, texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n";
+			"#define TEX2D_DEPTH_RGBA8(index, tex, coord2) process_texel(texture2DReconstruct(tex, coord2 * texture_parameters[index].scale, texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n";
 
 			if (props.emulate_shadow_compare)
 			{
@@ -861,24 +916,24 @@ namespace glsl
 				"#define SHADOW_COORD(coord3, scale, flags) vec3(coord3.xy * scale, _test_bit(flags, DEPTH_FLOAT)? coord3.z : min(float(coord3.z), 1.0))\n"
 				"#define SHADOW_COORD4(coord4, scale, flags) vec4(SHADOW_COORD(coord4.xyz, scale, flags), coord4.w)\n"
 				"#define SHADOW_COORD_PROJ(coord4, scale, flags) vec4(coord4.xy * scale, _test_bit(flags, DEPTH_FLOAT)? coord4.z : min(coord4.z, coord4.w), coord4.w)\n"
-				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), SHADOW_COORD(coord3, texture_parameters[index].scale, TEX_FLAGS(index)))\n"
-				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), SHADOW_COORD4(coord4, texture_parameters[index].scale, TEX_FLAGS(index)))\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), SHADOW_COORD_PROJ(coord4, texture_parameters[index].scale, TEX_FLAGS(index)))\n";
+				"#define TEX2D_SHADOW(index, coord3) texture(tex, SHADOW_COORD(coord3, texture_parameters[index].scale, TEX_FLAGS(index)))\n"
+				"#define TEX2D_SHADOWCUBE(index, coord4) texture(tex, SHADOW_COORD4(coord4, texture_parameters[index].scale, TEX_FLAGS(index)))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(tex, SHADOW_COORD_PROJ(coord4, texture_parameters[index].scale, TEX_FLAGS(index)))\n";
 			}
 			else
 			{
 				OS <<
-				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].scale, 1.))\n"
-				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), coord4 * vec3(texture_parameters[index].scale, 1., 1.))\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.))\n";
+				"#define TEX2D_SHADOW(index, tex, coord3) texture(tex, coord3 * vec3(texture_parameters[index].scale, 1.))\n"
+				"#define TEX2D_SHADOWCUBE(index, coord4) texture(tex, coord4 * vec3(texture_parameters[index].scale, 1., 1.))\n"
+				"#define TEX2D_SHADOWPROJ(index, tex, coord4) textureProj(tex, coord4 * vec4(texture_parameters[index].scale, 1., 1.))\n";
 			}
 
 			OS <<
-			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), TEX_FLAGS(index))\n"
-			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), TEX_FLAGS(index))\n"
-			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), TEX_FLAGS(index))\n"
-			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord3, dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), TEX_FLAGS(index))\n\n";
+			"#define TEX3D(index, tex, coord3) process_texel(texture(tex, coord3), TEX_FLAGS(index))\n"
+			"#define TEX3D_BIAS(index, tex, coord3, bias) process_texel(texture(tex, coord3, bias), TEX_FLAGS(index))\n"
+			"#define TEX3D_LOD(index, tex, coord3, lod) process_texel(textureLod(tex, coord3, lod), TEX_FLAGS(index))\n"
+			"#define TEX3D_GRAD(index, tex, coord3, dpdx, dpdy) process_texel(textureGrad(tex, coord3, dpdx, dpdy), TEX_FLAGS(index))\n"
+			"#define TEX3D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4), TEX_FLAGS(index))\n\n";
 		}
 
 		if (props.require_wpos)
@@ -922,51 +977,51 @@ namespace glsl
 		case FUNCTION::FUNCTION_REFL:
 			return "reflect($0, $1)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
-			return "TEX1D($_i, $0.x)";
+			return "TEX1D($_i, $t, $0.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS:
-			return "TEX1D_BIAS($_i, $0.x, $1.x)";
+			return "TEX1D_BIAS($_i, $t, $0.x, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ:
-			return "TEX1D_PROJ($_i, $0.xy)";
+			return "TEX1D_PROJ($_i, $t, $0.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD:
-			return "TEX1D_LOD($_i, $0.x, $1.x)";
+			return "TEX1D_LOD($_i, $t, $0.x, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD:
-			return "TEX1D_GRAD($_i, $0.x, $1.x, $2.x)";
+			return "TEX1D_GRAD($_i, $t, $0.x, $1.x, $2.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D:
-			return "TEX2D($_i, $0.xy)";
+			return "TEX2D($_i, $t, $0.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_BIAS:
-			return "TEX2D_BIAS($_i, $0.xy, $1.x)";
+			return "TEX2D_BIAS($_i, $t, $0.xy, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ:
-			return "TEX2D_PROJ($_i, $0)";
+			return "TEX2D_PROJ($_i, $t, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD:
-			return "TEX2D_LOD($_i, $0.xy, $1.x)";
+			return "TEX2D_LOD($_i, $t, $0.xy, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD:
-			return "TEX2D_GRAD($_i, $0.xy, $1.xy, $2.xy)";
+			return "TEX2D_GRAD($_i, $t, $0.xy, $1.xy, $2.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D:
-			return "TEX2D_SHADOW($_i, $0.xyz)";
+			return "TEX2D_SHADOW($_i, $t, $0.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SHADOWCUBE:
-			return "TEX2D_SHADOWCUBE($_i, $0)";
+			return "TEX2D_SHADOWCUBE($_i, $t, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ:
-			return "TEX2D_SHADOWPROJ($_i, $0)";
+			return "TEX2D_SHADOWPROJ($_i, $t, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:
-			return "TEX3D($_i, $0.xyz)";
+			return "TEX3D($_i, $t, $0.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_BIAS:
-			return "TEX3D_BIAS($_i, $0.xyz, $1.x)";
+			return "TEX3D_BIAS($_i, $t, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
-			return "TEX3D($_i, ($0.xyz / $0.w))";
+			return "TEX3D($_i, $t, ($0.xyz / $0.w))";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD:
-			return "TEX3D_LOD($_i, $0.xyz, $1.x)";
+			return "TEX3D_LOD($_i, $t, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD:
-			return "TEX3D_GRAD($_i, $0.xyz, $1.xyz, $2.xyz)";
+			return "TEX3D_GRAD($_i, $t, $0.xyz, $1.xyz, $2.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D:
-			return "TEX3D($_i, $0.xyz)";
+			return "TEX3D($_i, $t, $0.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_BIAS:
-			return "TEX3D_BIAS($_i, $0.xyz, $1.x)";
+			return "TEX3D_BIAS($_i, $t, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ:
-			return "TEX3D_PROJ($_i, $0)";
+			return "TEX3D_PROJ($_i, $t, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD:
-			return "TEX3D_LOD($_i, $0.xyz, $1.x)";
+			return "TEX3D_LOD($_i, $t, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD:
-			return "TEX3D_GRAD($_i, $0.xyz, $1.xyz, $2.xyz)";
+			return "TEX3D_GRAD($_i, $t, $0.xyz, $1.xyz, $2.xyz)";
 		case FUNCTION::FUNCTION_DFDX:
 			return "dFdx($0)";
 		case FUNCTION::FUNCTION_DFDY:
@@ -979,9 +1034,9 @@ namespace glsl
 		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCHCUBE:
 			return "textureLod($t, $0.xyz, 0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
-			return "TEX2D_DEPTH_RGBA8($_i, $0.xy)";
+			return "TEX2D_DEPTH_RGBA8($_i, $t, $0.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA_PROJ:
-			return "TEX2D_DEPTH_RGBA8($_i, ($0.xy / $0.w))";
+			return "TEX2D_DEPTH_RGBA8($_i, $t, ($0.xy / $0.w))";
 		}
 	}
 
